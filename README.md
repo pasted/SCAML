@@ -7,10 +7,10 @@ The pipeline extends the previous analysis and benchmark machine‑learning mode
 
 Scikit Learn models included are:
 
-LR - LogisticRegression
-RF - RandomForestClassifier
-XGB - XGBClassifier
-MLP - MLPClassifier (Multi-layer Perceptron classifier)
+* LR - LogisticRegression
+* RF - RandomForestClassifier
+* XGB - XGBClassifier
+* MLP - MLPClassifier (Multi-layer Perceptron classifier)
 
 
 ## Setup
