@@ -3,6 +3,8 @@ Single Cell RNA analysis pipeline for Seurat outputs of microglial iPSC, using S
 
 This project is an extension of the microglial iPSC Seurat classification and analysis. The input pipeline starts with https://github.com/pasted/scrna_ipsc
 
+The iPSC-microglia scRNA-seq project already uses Seurat v5, SCT integration, and Harmony (currently turned off due to harvests being on separate chips) to correct for chip batch effects (H4 vs H8). Label transfer was run against Olah 2020 microglia references to annotate clusters. This project reframes that problem as a machine-learning classification task: Build models that predict cell type/state directly from single-cell expression profiles. Compare ML performance vs traditional label transfer and clustering. Test generalization across harvests (H4 vs H8) and chip batches, and evaluate whether HEK controls are correctly recognized as outliers.
+
 The pipeline extends the previous analysis and benchmark machine‑learning models for cell type/state prediction on your iPSC‑microglia scRNA‑seq datasets (H4 vs H8 harvests; HEK controls), comparing against reference label transfer, and testing robustness to chip/harvest effects. Includes novelty detection for HEK controls.
 
 Scikit Learn models included are:
