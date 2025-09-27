@@ -1,5 +1,5 @@
 # SCAML
-Single Cell RNA analysis pipeline for Seurat outputs of microglial iPSC, using Random Forests.
+Single Cell RNA analysis pipeline for Seurat outputs of microglial iPSC, using Scikit Learn models. This is a demo project, in order to learn about the various ML models available.
 
 This project is an extension of the microglial iPSC Seurat classification and analysis. The input pipeline starts with https://github.com/pasted/scrna_ipsc
 
