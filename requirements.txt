@@ -11,3 +11,4 @@ shap>=0.45
 joblib>=1.4
 pyyaml>=6.0
 seaborn>=0.13
+scikit-misc>=0.2.0  # provides 'skmisc' for Scanpy seurat_v3 HVG selection

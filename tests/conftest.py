@@ -1,72 +1,81 @@
+import sys
+from pathlib import Path
+import pytest
+
+# Locate the package dir that contains "scaml/"
+PKG_DIR = Path(__file__).resolve().parents[1]  # either repo_root or SCAML/
+if not (PKG_DIR / "scaml").exists():
+    PKG_DIR = PKG_DIR / "SCAML"
+if (PKG_DIR / "scaml").exists() and str(PKG_DIR) not in sys.path:
+    sys.path.insert(0, str(PKG_DIR))
+
+
 import numpy as np
+import pandas as pd
 import anndata as ad
 import pytest
-from pathlib import Path
+
+
+# Ensure we can import "from scaml import ..." (module lives in SCAML/scaml)
+_SCAML_DIR = Path(__file__).resolve().parents[1] / "SCAML"
+if str(_SCAML_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCAML_DIR))
 
 
 @pytest.fixture(scope="session")
-def synthetic_adata():
-    """Create a tiny AnnData with clear signal between two microglia subtypes and a few HEK cells.
-    Columns in .obs: harvest, culture, chip, label_ref, is_hek
-    obsm contains a faux X_harmony embedding.
+def toy_h5ad(tmp_path_factory) -> Path:
+    """Create a tiny AnnData with integer counts + metadata columns SCAML expects.
+
+    Harvest split:
+      - train (H4): 30 cells, labels: {MG1, MG2}; (Monocyte absent in train)
+      - test  (H8): 30 cells, labels: {MG1, MG2, Monocyte}
     """
     rng = np.random.default_rng(42)
 
-    n_genes = 300
-    n_mg   = 60  # microglia cells
-    n_hek  = 10  # HEK controls
-    n      = n_mg + n_hek
+    n_genes = 50
+    n_train = 30
+    n_test = 30
+    n_cells = n_train + n_test
 
-    # base counts
-    X = rng.poisson(lam=1.0, size=(n, n_genes)).astype(float)
+    genes = [f"G{i}" for i in range(n_genes)]
+    cells = [f"C{i:03d}" for i in range(n_cells)]
 
-    # two microglia subtypes with signal on disjoint gene blocks
-    mg_labels = np.array(["homeostatic"] * (n_mg // 2) + ["activated"] * (n_mg - n_mg // 2))
-    hek_labels = np.array(["HEK"] * n_hek)
-    labels = np.concatenate([mg_labels, hek_labels])
+    # Integer counts (so HVG seurat_v3 won’t complain)
+    X = rng.poisson(lam=2.0, size=(n_cells, n_genes)).astype(np.int32)
 
-    # Boost signal: activated upregulates genes 0..19, homeostatic 20..39
-    act_idx = np.where(labels == "activated")[0]
-    hom_idx = np.where(labels == "homeostatic")[0]
-    X[act_idx, 0:20]  += rng.normal(loc=3.0, scale=0.5, size=(len(act_idx), 20))
-    X[hom_idx, 20:40] += rng.normal(loc=3.0, scale=0.5, size=(len(hom_idx), 20))
+    # Labels (strings)
+    labels_train = np.array(["Microglia cluster 1"] * 15 + ["Microglia cluster 2"] * 15)
+    labels_test  = np.array(
+        ["Microglia cluster 1"] * 10
+        + ["Microglia cluster 2"] * 10
+        + ["Monocyte"] * 10
+    )
+    label_ref = np.concatenate([labels_train, labels_test])
 
-    # HEK cells upregulate a different block to help novelty detection
-    hek_idx = np.where(labels == "HEK")[0]
-    X[hek_idx, 200:240] += rng.normal(loc=4.0, scale=0.5, size=(len(hek_idx), 40))
+    harvest = np.array(["H4"] * n_train + ["H8"] * n_test)
+    culture = np.array(["A", "C"] * (n_cells // 2) + (["A"] if n_cells % 2 else []))
+    is_hek  = np.array([False] * n_cells)
 
-    # Metadata
-    harvest = np.array(["H4"] * (n // 2) + ["H8"] * (n - n // 2))
-    culture = np.array(["A", "C", "D"])  # cycle through
-    culture = np.array([culture[i % 3] for i in range(n)])
-    chip    = np.array(["chip1" if i < n // 2 else "chip2" for i in range(n)])
-    is_hek  = labels == "HEK"
+    obs = pd.DataFrame(
+        {
+            "label_ref": label_ref,
+            "harvest": harvest,
+            "culture": culture[:n_cells],
+            "is_hek": is_hek,
+        },
+        index=cells,
+    )
+    var = pd.DataFrame({"gene": genes}, index=genes)
 
-    var_names = [f"G{i:04d}" for i in range(n_genes)]
-    adata = ad.AnnData(X=X)
-    adata.var_names = var_names
-    adata.obs["label_ref"] = labels
-    adata.obs["harvest"]   = harvest
-    adata.obs["culture"]   = culture
-    adata.obs["chip"]      = chip
-    adata.obs["is_hek"]    = is_hek
+    # Add a small embedding so --embedding can be tested
+    obsm = {"X_harmony": rng.normal(size=(n_cells, 8)).astype(np.float32)}
 
-    # Faux harmony embedding (random linear proj to 20 dims)
-    W = rng.normal(size=(n_genes, 20))
-    adata.obsm["X_harmony"] = X @ W
-
-    return adata
-
-
-@pytest.fixture()
-def tmpdir_out(tmp_path):
-    out = tmp_path / "out"
-    out.mkdir(parents=True, exist_ok=True)
+    adata = ad.AnnData(X=X, obs=obs, var=var, obsm=obsm)
+    out = tmp_path_factory.mktemp("adata") / "toy.h5ad"
+    adata.write_h5ad(out)
     return out
 
 
 @pytest.fixture()
-def saved_adata_tmp(tmp_path, synthetic_adata):
-    path = tmp_path / "toy.h5ad"
-    synthetic_adata.write_h5ad(path)
-    return path
+def outdir(tmp_path) -> Path:
+    return tmp_path / "out"

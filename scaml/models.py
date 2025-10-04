@@ -6,6 +6,17 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.neural_network import MLPClassifier
 
+from xgboost import XGBClassifier
+XGBClassifier(
+    n_estimators=300,
+    max_depth=6,
+    learning_rate=0.1,
+    subsample=0.9,
+    colsample_bytree=0.8,
+    tree_method="hist",
+    objective="multi:softprob",  # multiclass probabilities
+    eval_metric="mlogloss",
+)
 
 def make_model(name: str, n_classes: int) -> Pipeline:
     name = name.lower()
