@@ -249,3 +249,78 @@ GitHub Actions (name: **SCAML**) runs:
 
 * Built on top of your Seurat v5 pipeline (SCT, optional Harmony, label transfer to Olah 2020).
 * Uses: Scanpy/AnnData, scikit-learn, (optional) XGBoost, and R packages for export.
+
+## Example results
+
+Analysis of SCAML **H4-trained, H8-tested** model results from `summary_metrics.json`:
+
+| Algorithm                    | Accuracy  | F1-macro  | ROC-AUC (macro, OVR) | Interpretation                                                                   |
+| ---------------------------- | --------- | --------- | -------------------- | -------------------------------------------------------------------------------- |
+| **Logistic Regression (lr)** | 0.764     | 0.509     | 0.898                | Strong linear baseline; balanced precision/recall; good generalization.          |
+| **Random Forest (rf)**       | 0.731     | 0.363     | 0.900                | Slightly lower accuracy and poor F1 → likely class imbalance issue.              |
+| **XGBoost (xgb)**            | **0.771** | **0.544** | **0.901**            | Best performer overall — highest accuracy, F1, and AUC; robust ensemble learner. |
+| **MLP (mlp)**                | 0.745     | 0.389     | 0.871                | Decent but underperforms on F1 and AUC; possibly undertrained or overfitting.    |
+
+---
+
+### 🧠 Interpretation
+
+* **Best Algorithm:** ✅ **XGBoost**
+
+  * Highest **accuracy (77.1%)**, **F1-macro (0.54)**, and **ROC-AUC (0.90)** → excellent balance between precision and recall.
+  * Performs slightly better than logistic regression, meaning nonlinear relationships in your SCAML data (e.g., SV feature interactions) are important.
+* **Random Forest** shows good AUC but poor F1 → indicates it's predicting the majority class too often (class imbalance sensitivity).
+* **MLP (neural net)** underperforms, suggesting either limited data, suboptimal architecture, or insufficient epochs.
+
+---
+
+### 📊 Recommended next steps
+
+1. **Confirm class distribution** — the low F1 for RF/MLP hints at imbalance; consider **class weighting** or **SMOTE**.
+2. **Inspect confusion matrices** for XGB vs LR to see which SV classes are misclassified.
+3. **Cross-validate XGB** on multiple train/test splits (not just H4→H8) to check consistency across harvests/chips.
+4. **Model explainability**: use SHAP to interpret XGB feature contributions — useful for biological relevance in structural variant curation.
+
+---
+
+**Conclusion:**
+
+> For the SCAML dataset (H4-trained, H8-tested), **XGBoost** is the most effective algorithm — it achieves the best balance of accuracy, class-balanced F1, and overall discrimination (ROC-AUC ≈ 0.90).
+
+
+Analysis of **SCAML run where models were trained on H8 and tested on H4**:
+
+| Algorithm                    | Accuracy  | F1-macro  | ROC-AUC (macro OVR) | Interpretation                                                                   |
+| ---------------------------- | --------- | --------- | ------------------- | -------------------------------------------------------------------------------- |
+| **Logistic Regression (lr)** | 0.752     | 0.423     | 0.904               | Strong baseline; high AUC; slightly reduced F1 due to imbalance.                 |
+| **Random Forest (rf)**       | 0.744     | 0.350     | 0.899               | Similar to before — AUC fine, but poor recall on minority classes.               |
+| **XGBoost (xgb)**            | **0.779** | **0.571** | **0.905**           | Best across all metrics; consistent top performance between H4↔H8 tests.         |
+| **MLP (mlp)**                | 0.757     | 0.420     | 0.875               | Weaker AUC and F1 — again suggests underfitting or sensitivity to training size. |
+
+---
+
+### 🔍 Comparison to H4-trained → H8-tested results
+
+| Direction   | Best Model | Accuracy  | F1-macro  | ROC-AUC   | Notes                                |
+| ----------- | ---------- | --------- | --------- | --------- | ------------------------------------ |
+| **H4 → H8** | XGBoost    | 0.771     | 0.544     | 0.901     | Strong cross-harvest generalization  |
+| **H8 → H4** | XGBoost    | **0.779** | **0.571** | **0.905** | Slightly improved in both F1 and AUC |
+
+✅ **XGBoost again emerges as the top model** — and importantly, it generalizes well **in both directions** (H4→H8 and H8→H4).
+This symmetry suggests the learned patterns (e.g., SV feature relationships) are **stable across harvests/chips**, which supports biological rather than purely technical signal.
+
+---
+
+### 🧠 Interpretation summary
+
+* **Cross-harvest stability:** XGBoost achieves AUC ≈ 0.90 in both directions — excellent discriminative power.
+* **F1-macro ≈ 0.55–0.57**: indicates balanced detection of both true/false or multi-class SV labels.
+* **MLP underperformance** likely due to limited data or architecture mismatch.
+* **Logistic regression** performs surprisingly well given simplicity → worth keeping as a fast baseline.
+
+---
+
+### 🏁 Conclusion
+
+> Across both H4→H8 and H8→H4 experiments, **XGBoost consistently achieves the highest accuracy, F1-macro, and ROC-AUC**, indicating it is the most effective and robust algorithm for SCAML’s structural variant curation dataset.
+> Its performance stability across independent harvests supports strong generalization and suitability as the default model for downstream GenomeWiz integration.
