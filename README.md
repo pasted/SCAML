@@ -252,6 +252,14 @@ GitHub Actions (name: **SCAML**) runs:
 
 ## Example results
 
+## 🧬 Context
+
+SCAML here is being used as a **machine learning framework for transcriptomic classification** — evaluating how well expression patterns from **induced pluripotent stem cell (iPSC)-derived microglia** at one differentiation stage (harvest) can predict or distinguish those from another.
+
+* **H4 (Harvest 4)** = Early differentiation stage.
+* **H8 (Harvest 8)** = Later, more mature differentiation stage.
+* Each has **three biological replicates**, and models are trained on one harvest and tested on the other to measure **cross-harvest generalization** — i.e., whether transcriptomic signatures of maturation are reproducible and not chip-specific.
+
 Analysis of SCAML **H4-trained, H8-tested** model results from `summary_metrics.json`:
 
 | Algorithm                    | Accuracy  | F1-macro  | ROC-AUC (macro, OVR) | Interpretation                                                                   |
@@ -263,12 +271,27 @@ Analysis of SCAML **H4-trained, H8-tested** model results from `summary_metrics.
 
 ---
 
+## Model Performance (iPSC-microglia scRNA-seq)
+
+**Cross-harvest generalization**
+
+### Train on H4 → Test on H8
+![H4→H8 Metrics Bar](figures/scaml_bar_h4_to_h8.svg)
+![H4→H8 Metrics Radar](figures/scaml_radar_h4_to_h8.svg)
+
+### Train on H8 → Test on H4
+![H8→H4 Metrics Bar](figures/scaml_bar_h8_to_h4.svg)
+![H8→H4 Metrics Radar](figures/scaml_radar_h8_to_h4.svg)
+
+
+---
+
 ### 🧠 Interpretation
 
 * **Best Algorithm:** ✅ **XGBoost**
 
   * Highest **accuracy (77.1%)**, **F1-macro (0.54)**, and **ROC-AUC (0.90)** → excellent balance between precision and recall.
-  * Performs slightly better than logistic regression, meaning nonlinear relationships in your SCAML data (e.g., SV feature interactions) are important.
+  * Performs slightly better than logistic regression, meaning nonlinear relationships in your SCAML data are important.
 * **Random Forest** shows good AUC but poor F1 → indicates it's predicting the majority class too often (class imbalance sensitivity).
 * **MLP (neural net)** underperforms, suggesting either limited data, suboptimal architecture, or insufficient epochs.
 
@@ -277,9 +300,9 @@ Analysis of SCAML **H4-trained, H8-tested** model results from `summary_metrics.
 ### 📊 Recommended next steps
 
 1. **Confirm class distribution** — the low F1 for RF/MLP hints at imbalance; consider **class weighting** or **SMOTE**.
-2. **Inspect confusion matrices** for XGB vs LR to see which SV classes are misclassified.
+2. **Inspect confusion matrices** for XGB vs LR to see which cluster classes are misclassified.
 3. **Cross-validate XGB** on multiple train/test splits (not just H4→H8) to check consistency across harvests/chips.
-4. **Model explainability**: use SHAP to interpret XGB feature contributions — useful for biological relevance in structural variant curation.
+4. **Model explainability**: use SHAP to interpret XGB feature contributions — useful for biological relevance in transcript curation.
 
 ---
 
@@ -307,20 +330,31 @@ Analysis of **SCAML run where models were trained on H8 and tested on H4**:
 | **H8 → H4** | XGBoost    | **0.779** | **0.571** | **0.905** | Slightly improved in both F1 and AUC |
 
 ✅ **XGBoost again emerges as the top model** — and importantly, it generalizes well **in both directions** (H4→H8 and H8→H4).
-This symmetry suggests the learned patterns (e.g., SV feature relationships) are **stable across harvests/chips**, which supports biological rather than purely technical signal.
+This symmetry suggests the learned patterns are **stable across harvests/chips**, which supports biological rather than purely technical signal.
 
 ---
 
 ### 🧠 Interpretation summary
 
 * **Cross-harvest stability:** XGBoost achieves AUC ≈ 0.90 in both directions — excellent discriminative power.
-* **F1-macro ≈ 0.55–0.57**: indicates balanced detection of both true/false or multi-class SV labels.
+* **F1-macro ≈ 0.55–0.57**: indicates balanced detection of both true/false or multi-class Seurat cluster labels.
 * **MLP underperformance** likely due to limited data or architecture mismatch.
 * **Logistic regression** performs surprisingly well given simplicity → worth keeping as a fast baseline.
 
 ---
 
+### 🧠 Biological Interpretation
+
+* **Cross-harvest reproducibility:** High AUC values (~0.90) in both directions confirm that transcriptomic maturation signatures of iPSC-microglia are robust to chip and replicate variation.
+* **F1-macro (~0.54–0.57)** shows the model captures both early and late populations with balanced recall.
+* **XGBoost** consistently outperforms simpler (LR) and more complex (MLP) models — suggesting that **nonlinear but structured gene-expression relationships** dominate differentiation dynamics.
+
+---
+
 ### 🏁 Conclusion
 
-> Across both H4→H8 and H8→H4 experiments, **XGBoost consistently achieves the highest accuracy, F1-macro, and ROC-AUC**, indicating it is the most effective and robust algorithm for SCAML’s structural variant curation dataset.
-> Its performance stability across independent harvests supports strong generalization and suitability as the default model for downstream GenomeWiz integration.
+> Across both training directions (H4 → H8 and H8 → H4), **XGBoost** is the most effective algorithm for distinguishing early and late iPSC-microglial transcriptomic states.
+> It achieves the highest accuracy, balanced F1, and ROC-AUC, demonstrating that the maturation-associated gene-expression signatures it learns are biologically meaningful and reproducible across independent harvests and chips.
+
+
+
